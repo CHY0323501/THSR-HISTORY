@@ -11,6 +11,7 @@ const ICONS = {
   pin:      '<path d="M12 22s7-7 7-12a7 7 0 1 0-14 0c0 5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>',
   pencil:   '<path d="M14 4l6 6-9 9H5v-6z"/><path d="M13 5l6 6"/>',
   trash:    '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M10 11v7"/><path d="M14 11v7"/>',
+  ticket:   '<path d="M3 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/><path d="M14 5v2"/><path d="M14 11v2"/><path d="M14 17v2"/>',
   plus:     '<path d="M12 5v14"/><path d="M5 12h14"/>',
   close:    '<path d="M6 6l12 12"/><path d="M18 6 6 18"/>',
 

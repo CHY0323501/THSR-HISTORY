@@ -28,19 +28,35 @@
 
   <main>
     <section class="stats-card">
-      <div class="stat">
-        <span class="stat-label">總趟次</span>
-        <span class="stat-value" id="totalTrips">0</span>
-        <span class="stat-unit">趟</span>
+      <div class="stat" data-tone="trips">
+        <div class="stat-ico" data-icon="ticket" data-size="22"></div>
+        <div class="stat-body">
+          <span class="stat-label">總趟次</span>
+          <div class="stat-value-row">
+            <span class="stat-value" id="totalTrips">0</span>
+            <span class="stat-unit">趟</span>
+          </div>
+        </div>
       </div>
-      <div class="stat">
-        <span class="stat-label">累積里程</span>
-        <span class="stat-value" id="totalDistance">0</span>
-        <span class="stat-unit">公里</span>
+      <div class="stat" data-tone="distance">
+        <div class="stat-ico" data-icon="globe" data-size="22"></div>
+        <div class="stat-body">
+          <span class="stat-label">累積里程</span>
+          <div class="stat-value-row">
+            <span class="stat-value" id="totalDistance">0</span>
+            <span class="stat-unit">公里</span>
+          </div>
+        </div>
       </div>
-      <div class="stat">
-        <span class="stat-label">總花費</span>
-        <span class="stat-value">NT$ <span id="totalCost">0</span></span>
+      <div class="stat" data-tone="cost">
+        <div class="stat-ico" data-icon="wallet" data-size="22"></div>
+        <div class="stat-body">
+          <span class="stat-label">總花費</span>
+          <div class="stat-value-row">
+            <span class="stat-unit small-prefix">NT$</span>
+            <span class="stat-value" id="totalCost">0</span>
+          </div>
+        </div>
       </div>
     </section>
 

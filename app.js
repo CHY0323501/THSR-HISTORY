@@ -125,6 +125,12 @@
   function openModal(ticket = null) {
     editingId = ticket ? ticket.id : null;
     modalTitle.textContent = ticket ? '編輯行程' : '新增行程';
+
+    // Always rebuild every dropdown so editing legacy data never leaves
+    // a select empty.
+    fillCarOptions();
+    fillSeatOptions();
+
     if (ticket) {
       fillStationOptions(ticket.origin, ticket.destination);
       fDate.value      = ticket.date;
@@ -213,35 +219,69 @@
     const origin = getStation(t.origin);
     const dest   = getStation(t.destination);
     const km     = tripDistanceKm(t.origin, t.destination);
+    const dateFmt = (t.date || '').replace(/-/g, ' / ');
     return `
       <article class="ticket new" data-id="${t.id}">
         <button class="ticket-delete" data-action="delete" aria-label="刪除">${window.svgIcon('trash',14)}</button>
-        <div class="ticket-band">
-          <span class="brand-line"><span class="mini-logo">THSR</span> 台灣高鐵</span>
-          <span class="ticket-type-tag">${escapeHtml(t.type || '標準票')}</span>
-        </div>
-        <div class="ticket-body">
-          <div class="od">
-            <div class="station">
-              <span class="station-name">${escapeHtml(origin?.name || '?')}</span>
-              <span class="station-en">${escapeHtml(origin?.en || '')}</span>
+
+        <aside class="t-stripe" aria-hidden="true">
+          <span class="t-stripe-mark">高鐵</span>
+          <span class="t-stripe-en">THSR</span>
+        </aside>
+
+        <div class="t-content">
+          <header class="t-head">
+            <div class="t-brand">
+              <span class="t-brand-cn">台灣高鐵</span>
+              <span class="t-brand-en">TAIWAN HIGH SPEED RAIL</span>
             </div>
-            <div class="arrow">→</div>
-            <div class="station right">
-              <span class="station-name">${escapeHtml(dest?.name || '?')}</span>
-              <span class="station-en">${escapeHtml(dest?.en || '')}</span>
+            <span class="t-class">${escapeHtml(t.type || '標準票')}</span>
+          </header>
+
+          <div class="t-od">
+            <div class="t-station">
+              <span class="t-mini">起 站 FROM</span>
+              <span class="t-name">${escapeHtml(origin?.name || '?')}</span>
+              <span class="t-en">${escapeHtml(origin?.en || '')}</span>
+            </div>
+            <div class="t-arrow" aria-hidden="true"></div>
+            <div class="t-station right">
+              <span class="t-mini">迄 站 TO</span>
+              <span class="t-name">${escapeHtml(dest?.name || '?')}</span>
+              <span class="t-en">${escapeHtml(dest?.en || '')}</span>
             </div>
           </div>
-          <div class="info-grid">
-            <div class="cell"><span class="lbl">日期</span><span class="val">${escapeHtml(t.date)}</span></div>
-            <div class="cell"><span class="lbl">車次</span><span class="val">${escapeHtml(t.train || '—')}</span></div>
-            <div class="cell"><span class="lbl">車廂/座位</span><span class="val">${escapeHtml((t.car||'—')+' 車  '+displaySeat(t.seat))}</span></div>
-            <div class="cell"><span class="lbl">里程</span><span class="val">${km} km</span></div>
+
+          <div class="t-info">
+            <div class="t-cell">
+              <span class="t-lbl">日期 DATE</span>
+              <span class="t-val">${escapeHtml(dateFmt)}</span>
+            </div>
+            <div class="t-cell">
+              <span class="t-lbl">車次 TRAIN</span>
+              <span class="t-val">${escapeHtml(t.train || '—')}</span>
+            </div>
+            <div class="t-cell">
+              <span class="t-lbl">車廂 CAR</span>
+              <span class="t-val">${escapeHtml(t.car || '—')}</span>
+            </div>
+            <div class="t-cell">
+              <span class="t-lbl">座位 SEAT</span>
+              <span class="t-val">${escapeHtml(displaySeat(t.seat))}</span>
+            </div>
           </div>
-        </div>
-        <div class="ticket-footer">
-          <div class="qr" aria-hidden="true"></div>
-          <div class="price"><small>NT$</small>${t.price.toLocaleString()}</div>
+
+          <footer class="t-foot">
+            <div class="t-qr" aria-hidden="true">${window.svgIcon('qrCorner', 56)}</div>
+            <div class="t-foot-mid">
+              <span class="t-distance">${km} km · 大圓里程</span>
+              <span class="t-foot-note">進站憑證 · BOARDING TICKET</span>
+            </div>
+            <div class="t-fare">
+              <span class="t-fare-lbl">票價 FARE</span>
+              <span class="t-fare-amt"><span class="t-fare-cur">NT$</span>${t.price.toLocaleString()}</span>
+            </div>
+          </footer>
         </div>
       </article>
     `;
@@ -250,45 +290,51 @@
   function renderTicketOld(t) {
     const origin = getStation(t.origin);
     const dest   = getStation(t.destination);
-    const ticketNo = t.id.slice(-8).toUpperCase();
+    const km     = tripDistanceKm(t.origin, t.destination);
+    const serial = (t.id.replace(/[^a-zA-Z0-9]/g, '').slice(-12).toUpperCase().match(/.{1,4}/g) || []).join(' ');
+    const dateFmt = (t.date || '').replace(/-/g, '.');
     return `
       <article class="ticket old" data-id="${t.id}">
         <button class="ticket-delete" data-action="delete" aria-label="刪除">${window.svgIcon('trash',14)}</button>
-        <div class="old-head">
-          <div class="left">
-            <span class="old-logo">THSR</span>
-            <span class="title">高鐵車票 TICKET</span>
+
+        <div class="o-paper">
+          <div class="o-head">
+            <span class="o-brand-mark">高鐵</span>
+            <span class="o-brand-en">TAIWAN HIGH SPEED RAIL</span>
+            <span class="o-class">${escapeHtml(t.type || '標準票')}</span>
           </div>
-          <span class="ticket-no">No.${escapeHtml(ticketNo)}</span>
-        </div>
-        <div class="od-old">
-          <div class="station">
-            <span class="label">FROM 起站</span>
-            <span class="name">${escapeHtml(origin?.name || '?')}</span>
+
+          <div class="o-od">
+            <span class="o-name">${escapeHtml(origin?.name || '?')}</span>
+            <span class="o-arrow">→</span>
+            <span class="o-name">${escapeHtml(dest?.name || '?')}</span>
           </div>
-          <div class="arrow">▶</div>
-          <div class="station right">
-            <span class="label">TO 到站</span>
-            <span class="name">${escapeHtml(dest?.name || '?')}</span>
+          <div class="o-od-en">
+            <span>${escapeHtml(origin?.en || '')}</span>
+            <span></span>
+            <span>${escapeHtml(dest?.en || '')}</span>
           </div>
+
+          <div class="o-meta">
+            <div class="o-row"><span class="o-k">日期</span><span class="o-v">${dateFmt}</span></div>
+            <div class="o-row"><span class="o-k">車次</span><span class="o-v">${escapeHtml(t.train || '—')} 次</span></div>
+            <div class="o-row"><span class="o-k">車廂/座位</span><span class="o-v">${escapeHtml(t.car || '—')} 車 ${displaySeat(t.seat)}</span></div>
+            <div class="o-row"><span class="o-k">里程</span><span class="o-v">${km} km</span></div>
+          </div>
+
+          <div class="o-fare-row">
+            <span class="o-fare-label">票價</span>
+            <span class="o-fare-amt">NT$ ${t.price.toLocaleString()}</span>
+          </div>
+
+          <div class="o-serial">${serial || 'TICKET'}</div>
+          <div class="o-disclaimer">本票限當日當班次當區間有效 · 限購票本人使用</div>
         </div>
-        <div class="meta-old">
-          <div class="row"><span class="lbl">日期</span><span class="val">${escapeHtml(t.date)}</span></div>
-          <div class="row"><span class="lbl">車次</span><span class="val">${escapeHtml(t.train || '—')}</span></div>
-          <div class="row"><span class="lbl">車廂</span><span class="val">${escapeHtml(t.car || '—')}</span></div>
-          <div class="row"><span class="lbl">座位</span><span class="val">${escapeHtml(displaySeat(t.seat))}</span></div>
-          <div class="row"><span class="lbl">類別</span><span class="val">${escapeHtml(t.type || '標準票')}</span></div>
-          <div class="row"><span class="lbl">里程</span><span class="val">${km_(t)} km</span></div>
-        </div>
-        <div class="price-old">
-          <span class="ttype">FARE</span>
-          <span class="amt"><small>NT$</small>${t.price.toLocaleString()}</span>
-        </div>
-        <div class="magnetic"></div>
+
+        <div class="o-magnetic" aria-hidden="true"></div>
       </article>
     `;
   }
-  function km_(t) { return tripDistanceKm(t.origin, t.destination); }
 
   function renderTickets() {
     if (!tickets.length) {
