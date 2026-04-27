@@ -27,14 +27,15 @@
   const modal       = $('#ticketModal');
   const form        = $('#ticketForm');
   const modalTitle  = $('#modalTitle');
-  const fOrigin     = $('#f-origin');
-  const fDest       = $('#f-destination');
-  const fDate       = $('#f-date');
-  const fTrain      = $('#f-train');
-  const fCar        = $('#f-car');
-  const fSeat       = $('#f-seat');
-  const fType       = $('#f-type');
-  const fPrice      = $('#f-price');
+  const fOrigin      = $('#f-origin');
+  const fDest        = $('#f-destination');
+  const fDate        = $('#f-date');
+  const fTrain       = $('#f-train');
+  const fCar         = $('#f-car');
+  const fSeatNum     = $('#f-seat-num');
+  const fSeatLetter  = $('#f-seat-letter');
+  const fType        = $('#f-type');
+  const fPrice       = $('#f-price');
 
   // -------- storage --------
   function loadTickets() {
@@ -49,15 +50,41 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
   }
 
-  // -------- station selects --------
-  function fillStationOptions() {
-    const opts = D.THSR_STATIONS.map(
-      (s) => `<option value="${s.id}">${s.name} ${s.en}</option>`
+  // -------- form selects --------
+  // origin/destination 互斥：在另一個下拉中把對方那一站設為 disabled
+  function buildStationOptionsHtml(disabledId) {
+    return D.THSR_STATIONS.map((s) => {
+      const dis = s.id === disabledId ? ' disabled' : '';
+      return `<option value="${s.id}"${dis}>${s.name} ${s.en}</option>`;
+    }).join('');
+  }
+  function syncStationDropdowns() {
+    const o = fOrigin.value;
+    const d = fDest.value;
+    fOrigin.innerHTML = buildStationOptionsHtml(d);
+    fDest.innerHTML   = buildStationOptionsHtml(o);
+    fOrigin.value = o;
+    fDest.value   = d;
+  }
+  function fillStationOptions(originId = 'taipei', destId = 'zuoying') {
+    fOrigin.innerHTML = buildStationOptionsHtml(destId);
+    fDest.innerHTML   = buildStationOptionsHtml(originId);
+    fOrigin.value = originId;
+    fDest.value   = destId;
+  }
+
+  function fillCarOptions() {
+    fCar.innerHTML = D.CAR_OPTIONS.map(
+      (c) => `<option value="${c.value}">${c.label}</option>`
     ).join('');
-    fOrigin.innerHTML = opts;
-    fDest.innerHTML = opts;
-    fOrigin.value = 'taipei';
-    fDest.value = 'zuoying';
+  }
+  function fillSeatOptions() {
+    fSeatNum.innerHTML =
+      `<option value="" disabled selected>排</option>` +
+      D.SEAT_ROWS.map((n) => `<option value="${n}">${n}</option>`).join('');
+    fSeatLetter.innerHTML =
+      `<option value="" disabled selected>位</option>` +
+      D.SEAT_LETTERS.map((l) => `<option value="${l}">${l}</option>`).join('');
   }
 
   function getStation(id) { return D.THSR_STATIONS.find((s) => s.id === id); }
@@ -70,25 +97,53 @@
     return Math.abs(a.km - b.km);
   }
 
+  // 解析既有 seat 字串，e.g. "12A" / "08C" / "3D" → {num, letter}
+  function parseSeat(s) {
+    const m = String(s || '').match(/^(\d+)([A-Ea-e])$/);
+    if (!m) return { num: '', letter: '' };
+    return { num: String(parseInt(m[1], 10)), letter: m[2].toUpperCase() };
+  }
+  function joinSeat(num, letter) {
+    if (!num || !letter) return '';
+    return `${parseInt(num, 10)}${letter}`;
+  }
+  // 顯示 seat：把舊資料的 "08C" 也去掉前導 0
+  function displaySeat(s) {
+    if (!s) return '—';
+    const { num, letter } = parseSeat(s);
+    return num && letter ? `${num}${letter}` : s;
+  }
+
+  // 即時更新唯讀票價欄位
+  function updatePriceField() {
+    const fare = D.calcFare(fOrigin.value, fDest.value, fType.value);
+    fPrice.value = fare ? `NT$ ${fare.toLocaleString()}` : '—';
+    fPrice.dataset.amount = String(fare);
+  }
+
   // -------- modal --------
   function openModal(ticket = null) {
     editingId = ticket ? ticket.id : null;
     modalTitle.textContent = ticket ? '編輯行程' : '新增行程';
     if (ticket) {
-      fDate.value     = ticket.date;
-      fOrigin.value   = ticket.origin;
-      fDest.value     = ticket.destination;
-      fTrain.value    = ticket.train || '';
-      fCar.value      = ticket.car   || '';
-      fSeat.value     = ticket.seat  || '';
-      fType.value     = ticket.type  || '標準票';
-      fPrice.value    = ticket.price ?? '';
+      fillStationOptions(ticket.origin, ticket.destination);
+      fDate.value      = ticket.date;
+      fTrain.value     = ticket.train || '';
+      fCar.value       = ticket.car   || '1';
+      const { num, letter } = parseSeat(ticket.seat);
+      fSeatNum.value    = num    || '';
+      fSeatLetter.value = letter || '';
+      fType.value      = ticket.type || '標準票';
     } else {
       form.reset();
       fillStationOptions();
+      fillCarOptions();
+      fillSeatOptions();
       fDate.value = new Date().toISOString().slice(0, 10);
       fType.value = '標準票';
+      fCar.value  = '6';
     }
+    updatePriceField();
     modal.hidden = false;
   }
   function closeModal() {
@@ -103,16 +158,21 @@
       alert('起站與到站不能相同');
       return;
     }
+    if (!fSeatNum.value || !fSeatLetter.value) {
+      alert('請選擇座位 (排 + 位)');
+      return;
+    }
+    const fare = parseInt(fPrice.dataset.amount || '0', 10);
     const data = {
       id:          editingId || cryptoId(),
       date:        fDate.value,
       origin:      fOrigin.value,
       destination: fDest.value,
       train:       fTrain.value.trim(),
-      car:         fCar.value.trim(),
-      seat:        fSeat.value.trim(),
+      car:         fCar.value,
+      seat:        joinSeat(fSeatNum.value, fSeatLetter.value),
       type:        fType.value,
-      price:       Number(fPrice.value) || 0,
+      price:       fare,
       createdAt:   editingId
         ? (tickets.find((t) => t.id === editingId)?.createdAt || Date.now())
         : Date.now(),
@@ -175,7 +235,7 @@
           <div class="info-grid">
             <div class="cell"><span class="lbl">日期</span><span class="val">${escapeHtml(t.date)}</span></div>
             <div class="cell"><span class="lbl">車次</span><span class="val">${escapeHtml(t.train || '—')}</span></div>
-            <div class="cell"><span class="lbl">車廂/座位</span><span class="val">${escapeHtml((t.car||'—')+'  '+(t.seat||'—'))}</span></div>
+            <div class="cell"><span class="lbl">車廂/座位</span><span class="val">${escapeHtml((t.car||'—')+' 車  '+displaySeat(t.seat))}</span></div>
             <div class="cell"><span class="lbl">里程</span><span class="val">${km} km</span></div>
           </div>
         </div>
@@ -216,7 +276,7 @@
           <div class="row"><span class="lbl">日期</span><span class="val">${escapeHtml(t.date)}</span></div>
           <div class="row"><span class="lbl">車次</span><span class="val">${escapeHtml(t.train || '—')}</span></div>
           <div class="row"><span class="lbl">車廂</span><span class="val">${escapeHtml(t.car || '—')}</span></div>
-          <div class="row"><span class="lbl">座位</span><span class="val">${escapeHtml(t.seat || '—')}</span></div>
+          <div class="row"><span class="lbl">座位</span><span class="val">${escapeHtml(displaySeat(t.seat))}</span></div>
           <div class="row"><span class="lbl">類別</span><span class="val">${escapeHtml(t.type || '標準票')}</span></div>
           <div class="row"><span class="lbl">里程</span><span class="val">${km_(t)} km</span></div>
         </div>
@@ -368,6 +428,11 @@
       btn.addEventListener('click', () => setStyle(btn.dataset.style));
     });
 
+    // origin / destination 互斥 + 票價即時更新
+    fOrigin.addEventListener('change', () => { syncStationDropdowns(); updatePriceField(); });
+    fDest.addEventListener('change',   () => { syncStationDropdowns(); updatePriceField(); });
+    fType.addEventListener('change',   updatePriceField);
+
     ticketsList.addEventListener('click', (e) => {
       const card = e.target.closest('.ticket');
       if (!card) return;
@@ -397,6 +462,8 @@
   function init() {
     hydrateIcons();
     fillStationOptions();
+    fillCarOptions();
+    fillSeatOptions();
     bind();
     setStyle(currentStyle);
     render();
@@ -406,10 +473,14 @@
       const today = new Date();
       const ymd = (d) => d.toISOString().slice(0, 10);
       const back = (n) => { const x = new Date(today); x.setDate(today.getDate() - n); return ymd(x); };
+      const mk = (date, origin, dest, train, car, seat, type) => ({
+        id: cryptoId(), date, origin, destination: dest, train, car, seat, type,
+        price: D.calcFare(origin, dest, type), createdAt: Date.now(),
+      });
       tickets = [
-        { id: cryptoId(), date: back(2),  origin: 'taipei',   destination: 'zuoying',  train: '0823', car: '6',  seat: '12A', type: '標準票', price: 1490, createdAt: Date.now() },
-        { id: cryptoId(), date: back(15), origin: 'banqiao',  destination: 'taichung', train: '0617', car: '4',  seat: '08C', type: '商務票', price: 1145, createdAt: Date.now() },
-        { id: cryptoId(), date: back(30), origin: 'zuoying',  destination: 'taipei',   train: '1234', car: '10', seat: '03D', type: '標準票', price: 1490, createdAt: Date.now() },
+        mk(back(2),  'taipei',  'zuoying',  '0823', '6',  '12A', '商務票'),
+        mk(back(15), 'banqiao', 'taichung', '0617', '4',  '8C',  '標準票'),
+        mk(back(30), 'zuoying', 'taipei',   '1234', '10', '3D',  '自由座'),
       ];
       saveTickets();
       localStorage.setItem('thsr.seeded', '1');

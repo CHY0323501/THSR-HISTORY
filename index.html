@@ -108,11 +108,14 @@
 
         <label class="field">
           <span>車廂</span>
-          <input type="text" id="f-car" placeholder="例: 6" />
+          <select id="f-car" required></select>
         </label>
         <label class="field">
           <span>座位</span>
-          <input type="text" id="f-seat" placeholder="例: 12A" />
+          <div class="seat-pair">
+            <select id="f-seat-num" required aria-label="排"></select>
+            <select id="f-seat-letter" required aria-label="位"></select>
+          </div>
         </label>
 
         <label class="field">
@@ -124,12 +127,12 @@
             <option>學生票</option>
             <option>敬老票</option>
             <option>愛心票</option>
-            <option>早鳥票</option>
+            <option>早鳥 65 折</option>
           </select>
         </label>
         <label class="field">
-          <span>票價 (NT$)</span>
-          <input type="number" id="f-price" min="0" required />
+          <span>票價 (NT$，依起訖站自動計算)</span>
+          <input type="text" id="f-price" readonly tabindex="-1" />
         </label>
       </div>
 

@@ -173,12 +173,69 @@ const SPEND_ITEMS = [
   { icon: 'smartphone', name: 'iPhone 16 Pro',    price: 36900 },
 ];
 
+// =====================================================================
+//  車廂與座位選項
+// =====================================================================
+const CAR_OPTIONS = [
+  { value: '1',  label: '第 1 節' },
+  { value: '2',  label: '第 2 節' },
+  { value: '3',  label: '第 3 節' },
+  { value: '4',  label: '第 4 節' },
+  { value: '5',  label: '第 5 節' },
+  { value: '6',  label: '第 6 節 (商務車廂)' },
+  { value: '7',  label: '第 7 節' },
+  { value: '8',  label: '第 8 節' },
+  { value: '9',  label: '第 9 節' },
+  { value: '10', label: '第 10 節 (自由座)' },
+  { value: '11', label: '第 11 節 (自由座)' },
+  { value: '12', label: '第 12 節 (自由座)' },
+];
+const SEAT_ROWS = Array.from({ length: 13 }, (_, i) => String(i + 1));   // 1..13
+const SEAT_LETTERS = ['A', 'B', 'C', 'D', 'E'];
+
+// =====================================================================
+//  票價計算
+//  以營運里程 km 為基礎：標準車廂 = 15 + 4.4 * km，四捨五入到 5
+//  再依票種乘上倍率
+// =====================================================================
+const TICKET_TYPE_MULT = {
+  '標準票':     1.00,
+  '商務票':     1.95,   // 商務車廂約為標準的 1.95~2.0 倍
+  '自由座':     0.95,   // 自由座約 95 折
+  '學生票':     0.85,   // 大專學生團體 15% off
+  '敬老票':     0.50,
+  '愛心票':     0.50,
+  '早鳥 65 折': 0.65,
+};
+
+function standardFare(km) {
+  if (km <= 0) return 0;
+  // 四捨五入到最近的 5 元
+  return Math.round((15 + km * 4.4) / 5) * 5;
+}
+
+function calcFare(originId, destId, ticketType) {
+  const a = THSR_STATIONS.find((s) => s.id === originId);
+  const b = THSR_STATIONS.find((s) => s.id === destId);
+  if (!a || !b || a.id === b.id) return 0;
+  const km = Math.abs(a.km - b.km);
+  const base = standardFare(km);
+  const mult = TICKET_TYPE_MULT[ticketType] ?? 1.0;
+  return Math.round((base * mult) / 5) * 5;
+}
+
 // 暴露到全域 (給 globe.js / app.js 用)
 window.THSR_DATA = {
   THSR_STATIONS,
   WORLD_CITIES,
   TAIPEI,
   SPEND_ITEMS,
+  CAR_OPTIONS,
+  SEAT_ROWS,
+  SEAT_LETTERS,
+  TICKET_TYPE_MULT,
   haversineKm,
   findClosestCity,
+  standardFare,
+  calcFare,
 };

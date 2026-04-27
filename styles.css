@@ -768,6 +768,41 @@ main {
   margin-top: 20px;
 }
 
+/* seat double-select */
+.seat-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.seat-pair select {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 11px 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.seat-pair select:focus {
+  border-color: var(--thsr-orange);
+  background: rgba(255, 255, 255, 0.06);
+}
+.seat-pair select option { color: #111; }
+.seat-pair select:invalid { color: var(--text-dim); }
+
+/* readonly auto-fare price */
+.field input[readonly] {
+  background: rgba(237, 92, 50, 0.08);
+  border-color: rgba(237, 92, 50, 0.35);
+  color: var(--thsr-orange);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+  user-select: none;
+}
+.field input[readonly]:focus { outline: none; }
+
 /* ================================================================
    RWD
    ================================================================ */
