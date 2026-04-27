@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a1f44" />
+  <title>THSR 高鐵購票紀錄 · Rail Journey Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">THSR</span>
+      <div class="brand-text">
+        <h1>高鐵購票紀錄</h1>
+        <p>Taiwan High Speed Rail · Journey Log</p>
+      </div>
+    </div>
+
+    <div class="topbar-controls">
+      <div class="style-toggle" role="tablist" aria-label="車票樣式">
+        <button type="button" class="style-btn active" data-style="new" role="tab">新版車票</button>
+        <button type="button" class="style-btn" data-style="old" role="tab">舊版車票</button>
+      </div>
+      <button id="addBtn" class="primary-btn"><span class="btn-ico" data-icon="plus"></span>新增行程</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="stats-card">
+      <div class="stat">
+        <span class="stat-label">總趟次</span>
+        <span class="stat-value" id="totalTrips">0</span>
+        <span class="stat-unit">趟</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">累積里程</span>
+        <span class="stat-value" id="totalDistance">0</span>
+        <span class="stat-unit">公里</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">總花費</span>
+        <span class="stat-value">NT$ <span id="totalCost">0</span></span>
+      </div>
+    </section>
+
+    <section class="spend-section">
+      <div class="section-head">
+        <h2><span class="head-ico" data-icon="wallet"></span>你的花費可以買…</h2>
+        <p class="section-sub">把 NT$ <span id="spendTotal">0</span> 換成日常生活中買得到的東西</p>
+      </div>
+      <div class="spend-grid" id="spendGrid"></div>
+    </section>
+
+    <section class="globe-section">
+      <div class="globe-info">
+        <h2><span class="head-ico" data-icon="globe"></span>你的累積里程相當於…</h2>
+        <p class="match-headline" id="matchHeadline">尚無紀錄，新增行程看看你能飛多遠！</p>
+        <p class="match-detail" id="matchDetail"></p>
+        <div class="match-meta" id="matchMeta"></div>
+      </div>
+      <div class="globe-wrap">
+        <div id="globe"></div>
+        <div class="globe-hint">滑鼠拖曳可旋轉地球 · 滾輪縮放</div>
+      </div>
+    </section>
+
+    <section class="tickets-section">
+      <div class="section-head">
+        <h2>我的車票</h2>
+        <p class="section-sub">點選車票可編輯，右上角可刪除</p>
+      </div>
+      <div id="ticketsList" class="tickets-list"></div>
+      <div id="emptyState" class="empty-state" hidden>
+        <p>還沒有任何車票紀錄</p>
+        <button class="primary-btn" id="addBtnEmpty">新增第一張車票</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal -->
+  <div class="modal" id="ticketModal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <form class="modal-card" id="ticketForm">
+      <header class="modal-head">
+        <h2 id="modalTitle">新增行程</h2>
+        <button type="button" class="icon-btn" data-close aria-label="關閉"><span data-icon="close" data-size="22"></span></button>
+      </header>
+
+      <div class="form-grid">
+        <label class="field">
+          <span>搭乘日期</span>
+          <input type="date" id="f-date" required />
+        </label>
+        <label class="field">
+          <span>車次</span>
+          <input type="text" id="f-train" placeholder="例: 0823" />
+        </label>
+
+        <label class="field">
+          <span>起站</span>
+          <select id="f-origin" required></select>
+        </label>
+        <label class="field">
+          <span>到站</span>
+          <select id="f-destination" required></select>
+        </label>
+
+        <label class="field">
+          <span>車廂</span>
+          <input type="text" id="f-car" placeholder="例: 6" />
+        </label>
+        <label class="field">
+          <span>座位</span>
+          <input type="text" id="f-seat" placeholder="例: 12A" />
+        </label>
+
+        <label class="field">
+          <span>票種</span>
+          <select id="f-type">
+            <option>標準票</option>
+            <option>商務票</option>
+            <option>自由座</option>
+            <option>學生票</option>
+            <option>敬老票</option>
+            <option>愛心票</option>
+            <option>早鳥票</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>票價 (NT$)</span>
+          <input type="number" id="f-price" min="0" required />
+        </label>
+      </div>
+
+      <footer class="modal-foot">
+        <button type="button" class="ghost-btn" data-close>取消</button>
+        <button type="submit" class="primary-btn">儲存</button>
+      </footer>
+    </form>
+  </div>
+
+  <!-- Three.js r147 vendored locally (see lib/) -->
+  <script src="lib/three.min.js"></script>
+  <script src="lib/OrbitControls.js"></script>
+  <script src="icons.js"></script>
+  <script src="data.js"></script>
+  <script src="globe.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
