@@ -194,34 +194,78 @@ const SEAT_ROWS = Array.from({ length: 13 }, (_, i) => String(i + 1));   // 1..1
 const SEAT_LETTERS = ['A', 'B', 'C', 'D', 'E'];
 
 // =====================================================================
-//  票價計算
-//  以營運里程 km 為基礎：標準車廂 = 15 + 4.4 * km，四捨五入到 5
-//  再依票種乘上倍率
+//  THSR 官方票價對照表 (標準車廂 全票，NT$，2024 公告版)
+//  key 為 lowKm__highKm 兩站 id (按營運里程小→大排序)
+//  覆蓋 12 站 × 11 對端點 = 66 個區間
 // =====================================================================
+const STANDARD_FARES = {
+  // 南港 起
+  'nangang__taipei': 40,    'nangang__banqiao': 70,    'nangang__taoyuan': 200,
+  'nangang__hsinchu': 330,  'nangang__miaoli': 480,    'nangang__taichung': 760,
+  'nangang__changhua': 920, 'nangang__yunlin': 1060,   'nangang__chiayi': 1140,
+  'nangang__tainan': 1410,  'nangang__zuoying': 1530,
+  // 台北 起
+  'taipei__banqiao': 35,    'taipei__taoyuan': 160,    'taipei__hsinchu': 290,
+  'taipei__miaoli': 430,    'taipei__taichung': 700,   'taipei__changhua': 870,
+  'taipei__yunlin': 1010,   'taipei__chiayi': 1080,    'taipei__tainan': 1350,
+  'taipei__zuoying': 1490,
+  // 板橋 起
+  'banqiao__taoyuan': 130,  'banqiao__hsinchu': 260,   'banqiao__miaoli': 410,
+  'banqiao__taichung': 670, 'banqiao__changhua': 840,  'banqiao__yunlin': 980,
+  'banqiao__chiayi': 1050,  'banqiao__tainan': 1320,   'banqiao__zuoying': 1460,
+  // 桃園 起
+  'taoyuan__hsinchu': 130,  'taoyuan__miaoli': 280,    'taoyuan__taichung': 540,
+  'taoyuan__changhua': 710, 'taoyuan__yunlin': 850,    'taoyuan__chiayi': 930,
+  'taoyuan__tainan': 1190,  'taoyuan__zuoying': 1330,
+  // 新竹 起
+  'hsinchu__miaoli': 150,   'hsinchu__taichung': 410,  'hsinchu__changhua': 580,
+  'hsinchu__yunlin': 720,   'hsinchu__chiayi': 800,    'hsinchu__tainan': 1060,
+  'hsinchu__zuoying': 1200,
+  // 苗栗 起
+  'miaoli__taichung': 270,  'miaoli__changhua': 440,   'miaoli__yunlin': 580,
+  'miaoli__chiayi': 660,    'miaoli__tainan': 930,     'miaoli__zuoying': 1070,
+  // 台中 起
+  'taichung__changhua': 175,'taichung__yunlin': 320,   'taichung__chiayi': 400,
+  'taichung__tainan': 660,  'taichung__zuoying': 800,
+  // 彰化 起
+  'changhua__yunlin': 145,  'changhua__chiayi': 220,   'changhua__tainan': 490,
+  'changhua__zuoying': 630,
+  // 雲林 起
+  'yunlin__chiayi': 80,     'yunlin__tainan': 360,     'yunlin__zuoying': 490,
+  // 嘉義 起
+  'chiayi__tainan': 280,    'chiayi__zuoying': 410,
+  // 台南 起
+  'tainan__zuoying': 140,
+};
+
+// 票種倍率 (相對於標準車廂全票) — 以較常見的近似值
 const TICKET_TYPE_MULT = {
-  '標準票':     1.00,
-  '商務票':     1.95,   // 商務車廂約為標準的 1.95~2.0 倍
-  '自由座':     0.95,   // 自由座約 95 折
-  '學生票':     0.85,   // 大專學生團體 15% off
-  '敬老票':     0.50,
-  '愛心票':     0.50,
+  '標準票':     1.00,   // 標準車廂全票
+  '商務票':     1.60,   // 商務車廂全票 ≈ 標準 × 1.6
+  '自由座':     0.97,   // 自由座約 95~97 折
+  '學生票':     0.85,   // 大專團體 85 折
+  '敬老票':     0.50,   // 半價
+  '愛心票':     0.50,   // 半價
   '早鳥 65 折': 0.65,
 };
 
-function standardFare(km) {
-  if (km <= 0) return 0;
-  // 四捨五入到最近的 5 元
-  return Math.round((15 + km * 4.4) / 5) * 5;
+function pairKey(a, b) {
+  if (a === b) return null;
+  const order = THSR_STATIONS.map((s) => s.id);
+  const ai = order.indexOf(a);
+  const bi = order.indexOf(b);
+  if (ai < 0 || bi < 0) return null;
+  return ai < bi ? `${a}__${b}` : `${b}__${a}`;
 }
 
 function calcFare(originId, destId, ticketType) {
-  const a = THSR_STATIONS.find((s) => s.id === originId);
-  const b = THSR_STATIONS.find((s) => s.id === destId);
-  if (!a || !b || a.id === b.id) return 0;
-  const km = Math.abs(a.km - b.km);
-  const base = standardFare(km);
+  const key = pairKey(originId, destId);
+  if (!key) return 0;
+  const std = STANDARD_FARES[key] || 0;
   const mult = TICKET_TYPE_MULT[ticketType] ?? 1.0;
-  return Math.round((base * mult) / 5) * 5;
+  // 商務票四捨五入到 10，其他到 5；和官方公告慣例一致
+  const step = ticketType === '商務票' ? 10 : 5;
+  return Math.round((std * mult) / step) * step;
 }
 
 // 暴露到全域 (給 globe.js / app.js 用)
@@ -234,8 +278,9 @@ window.THSR_DATA = {
   SEAT_ROWS,
   SEAT_LETTERS,
   TICKET_TYPE_MULT,
+  STANDARD_FARES,
   haversineKm,
   findClosestCity,
-  standardFare,
+  pairKey,
   calcFare,
 };

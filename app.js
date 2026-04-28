@@ -215,123 +215,139 @@
     ));
   }
 
+  // 把 ticket id 縮成 13 位 PNR-ish 序號 (大寫英數)
+  function ticketSerial(t) {
+    return (t.id.replace(/[^a-zA-Z0-9]/g, '').slice(-13).toUpperCase()) || 'TICKET';
+  }
+  function dateZh(t) {
+    // YYYY/MM/DD
+    return (t.date || '').replace(/-/g, '/');
+  }
+  function carClassLabel(t) {
+    const car = parseInt(t.car || '0', 10);
+    if (car === 6) return '商務車廂';
+    if ([10, 11, 12].includes(car)) return '自由車廂';
+    return '標準車廂';
+  }
+
+  // ---- 新版 (2018 redesign) — 白底 + 黑體 + 橘/灰流動曲線 ----
   function renderTicketNew(t) {
     const origin = getStation(t.origin);
     const dest   = getStation(t.destination);
-    const km     = tripDistanceKm(t.origin, t.destination);
-    const dateFmt = (t.date || '').replace(/-/g, ' / ');
     return `
       <article class="ticket new" data-id="${t.id}">
         <button class="ticket-delete" data-action="delete" aria-label="刪除">${window.svgIcon('trash',14)}</button>
 
-        <aside class="t-stripe" aria-hidden="true">
-          <span class="t-stripe-mark">高鐵</span>
-          <span class="t-stripe-en">THSR</span>
-        </aside>
+        <!-- 橘+灰流動曲線 (2018 改版的視覺主軸) -->
+        <svg class="t-flow" viewBox="0 0 380 180" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M -20 70 C 80 30, 180 110, 280 50 S 420 90, 460 30" stroke="#ED5C32" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M -20 110 C 100 70, 200 150, 300 90 S 440 130, 480 80" stroke="#9aa0a6" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.55"/>
+          <path d="M -20 140 C 120 100, 220 170, 320 120 S 460 150, 500 110" stroke="#ED5C32" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.4"/>
+        </svg>
 
-        <div class="t-content">
+        <div class="t-paper">
           <header class="t-head">
             <div class="t-brand">
-              <span class="t-brand-cn">台灣高鐵</span>
+              <span class="t-brand-cn">高鐵</span>
               <span class="t-brand-en">TAIWAN HIGH SPEED RAIL</span>
             </div>
-            <span class="t-class">${escapeHtml(t.type || '標準票')}</span>
+            <span class="t-class">${escapeHtml(carClassLabel(t))}</span>
           </header>
 
-          <div class="t-od">
-            <div class="t-station">
-              <span class="t-mini">起 站 FROM</span>
-              <span class="t-name">${escapeHtml(origin?.name || '?')}</span>
-              <span class="t-en">${escapeHtml(origin?.en || '')}</span>
+          <div class="t-row-top">
+            <div class="t-cell">
+              <span class="t-lbl">日期 Date</span>
+              <span class="t-val">${escapeHtml(dateZh(t))}</span>
             </div>
-            <div class="t-arrow" aria-hidden="true"></div>
-            <div class="t-station right">
-              <span class="t-mini">迄 站 TO</span>
-              <span class="t-name">${escapeHtml(dest?.name || '?')}</span>
-              <span class="t-en">${escapeHtml(dest?.en || '')}</span>
+            <div class="t-cell">
+              <span class="t-lbl">車次 Train</span>
+              <span class="t-val">${escapeHtml(t.train || '—')}</span>
+            </div>
+            <div class="t-cell t-cell-fare">
+              <span class="t-lbl">票價 Fare</span>
+              <span class="t-val">NT$ ${t.price.toLocaleString()}</span>
             </div>
           </div>
 
-          <div class="t-info">
-            <div class="t-cell">
-              <span class="t-lbl">日期 DATE</span>
-              <span class="t-val">${escapeHtml(dateFmt)}</span>
+          <div class="t-od">
+            <div class="t-od-half">
+              <span class="t-od-mini">起站 From</span>
+              <span class="t-od-name">${escapeHtml(origin?.name || '?')}</span>
             </div>
-            <div class="t-cell">
-              <span class="t-lbl">車次 TRAIN</span>
-              <span class="t-val">${escapeHtml(t.train || '—')}</span>
+            <span class="t-od-arrow" aria-hidden="true">→</span>
+            <div class="t-od-half right">
+              <span class="t-od-mini">迄站 To</span>
+              <span class="t-od-name">${escapeHtml(dest?.name || '?')}</span>
             </div>
+          </div>
+
+          <div class="t-row-bot">
             <div class="t-cell">
-              <span class="t-lbl">車廂 CAR</span>
+              <span class="t-lbl">車廂 Car</span>
               <span class="t-val">${escapeHtml(t.car || '—')}</span>
             </div>
             <div class="t-cell">
-              <span class="t-lbl">座位 SEAT</span>
+              <span class="t-lbl">座位 Seat</span>
               <span class="t-val">${escapeHtml(displaySeat(t.seat))}</span>
+            </div>
+            <div class="t-cell">
+              <span class="t-lbl">票種 Type</span>
+              <span class="t-val">${escapeHtml(t.type || '標準票')}</span>
             </div>
           </div>
 
-          <footer class="t-foot">
-            <div class="t-qr" aria-hidden="true">${window.svgIcon('qrCorner', 56)}</div>
-            <div class="t-foot-mid">
-              <span class="t-distance">${km} km · 大圓里程</span>
-              <span class="t-foot-note">進站憑證 · BOARDING TICKET</span>
-            </div>
-            <div class="t-fare">
-              <span class="t-fare-lbl">票價 FARE</span>
-              <span class="t-fare-amt"><span class="t-fare-cur">NT$</span>${t.price.toLocaleString()}</span>
-            </div>
-          </footer>
+          <div class="t-serial">${ticketSerial(t)} · 限當日當班次有效</div>
         </div>
+
+        <!-- 磁條 -->
+        <div class="t-mag" aria-hidden="true"></div>
       </article>
     `;
   }
 
+  // ---- 舊版 (2018 改版前) — 橘底 + 細明體 + 扁平資訊 ----
   function renderTicketOld(t) {
     const origin = getStation(t.origin);
     const dest   = getStation(t.destination);
-    const km     = tripDistanceKm(t.origin, t.destination);
-    const serial = (t.id.replace(/[^a-zA-Z0-9]/g, '').slice(-12).toUpperCase().match(/.{1,4}/g) || []).join(' ');
-    const dateFmt = (t.date || '').replace(/-/g, '.');
     return `
       <article class="ticket old" data-id="${t.id}">
         <button class="ticket-delete" data-action="delete" aria-label="刪除">${window.svgIcon('trash',14)}</button>
 
         <div class="o-paper">
-          <div class="o-head">
-            <span class="o-brand-mark">高鐵</span>
-            <span class="o-brand-en">TAIWAN HIGH SPEED RAIL</span>
-            <span class="o-class">${escapeHtml(t.type || '標準票')}</span>
+          <header class="o-head">
+            <div class="o-brand">
+              <span class="o-brand-cn">高鐵</span>
+              <span class="o-brand-en">TAIWAN HIGH SPEED RAIL</span>
+            </div>
+            <span class="o-class">${escapeHtml(carClassLabel(t))}</span>
+          </header>
+
+          <div class="o-od-line">
+            <span class="o-od-name">${escapeHtml(origin?.name || '?')}</span>
+            <span class="o-od-arrow">→</span>
+            <span class="o-od-name">${escapeHtml(dest?.name || '?')}</span>
           </div>
 
-          <div class="o-od">
-            <span class="o-name">${escapeHtml(origin?.name || '?')}</span>
-            <span class="o-arrow">→</span>
-            <span class="o-name">${escapeHtml(dest?.name || '?')}</span>
-          </div>
-          <div class="o-od-en">
-            <span>${escapeHtml(origin?.en || '')}</span>
-            <span></span>
-            <span>${escapeHtml(dest?.en || '')}</span>
-          </div>
-
-          <div class="o-meta">
-            <div class="o-row"><span class="o-k">日期</span><span class="o-v">${dateFmt}</span></div>
-            <div class="o-row"><span class="o-k">車次</span><span class="o-v">${escapeHtml(t.train || '—')} 次</span></div>
-            <div class="o-row"><span class="o-k">車廂/座位</span><span class="o-v">${escapeHtml(t.car || '—')} 車 ${displaySeat(t.seat)}</span></div>
-            <div class="o-row"><span class="o-k">里程</span><span class="o-v">${km} km</span></div>
+          <div class="o-info">
+            <div class="o-row">
+              <span class="o-k">日期</span><span class="o-v">${escapeHtml(dateZh(t))}</span>
+              <span class="o-k">車次</span><span class="o-v">${escapeHtml(t.train || '—')}</span>
+            </div>
+            <div class="o-row">
+              <span class="o-k">車廂</span><span class="o-v">${escapeHtml(t.car || '—')} 車</span>
+              <span class="o-k">座位</span><span class="o-v">${escapeHtml(displaySeat(t.seat))}</span>
+            </div>
+            <div class="o-row">
+              <span class="o-k">票種</span><span class="o-v">${escapeHtml(t.type || '標準票')}</span>
+              <span class="o-k">票價</span><span class="o-v o-fare">NT$ ${t.price.toLocaleString()}</span>
+            </div>
           </div>
 
-          <div class="o-fare-row">
-            <span class="o-fare-label">票價</span>
-            <span class="o-fare-amt">NT$ ${t.price.toLocaleString()}</span>
-          </div>
-
-          <div class="o-serial">${serial || 'TICKET'}</div>
-          <div class="o-disclaimer">本票限當日當班次當區間有效 · 限購票本人使用</div>
+          <div class="o-serial">${ticketSerial(t)}</div>
         </div>
 
-        <div class="o-magnetic" aria-hidden="true"></div>
+        <!-- 磁條 -->
+        <div class="o-mag" aria-hidden="true"></div>
       </article>
     `;
   }
